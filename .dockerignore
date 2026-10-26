@@ -1,0 +1,17 @@
+.venv
+data
+runs
+tenants
+exports
+ssh
+bonrs.db*
+*.sqlite
+knowledge/inbox
+.sandbox
+.git
+.playwright-mcp
+**/__pycache__
+.env
+.claude
+/vendor
+.DS_Store

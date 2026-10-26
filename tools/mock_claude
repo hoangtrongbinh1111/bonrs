@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+"""Mock `claude -p` for demos and smoke tests: no network, no cost.
+
+Writes every stage's contract files with plausible content and streams stream-json
+events like the real CLI, so the whole pipeline and web UI can be exercised end to end.
+Use: BONRS_CLAUDE_BIN=tools/mock_claude  (BONRS_MOCK_DELAY=seconds per step, default 1.5)
+"""
+import json, os, random, re, subprocess, sys, time
+from pathlib import Path
+
+prompt = sys.argv[sys.argv.index("-p") + 1]
+cwd = Path.cwd()
+DELAY = float(os.environ.get("BONRS_MOCK_DELAY", "1.5"))
+m = re.search(r"Stage (\d\d)", prompt)
+st = m.group(1) if m else "kb"
+cfg = {}
+if (cwd / "bonrs.yaml").exists():
+    import yaml
+    cfg = yaml.safe_load((cwd / "bonrs.yaml").read_text()) or {}
+IDEA = cfg.get("idea", "Physics-informed learning for battery health")
+J = cfg.get("target_journal", "Journal of Energy Storage")
+rnd = re.search(r"review round (\d+)", prompt)
+K = int(rnd.group(1)) if rnd else len(list((cwd / "reviews").glob("round_*.json"))) or 1
+
+
+def emit(ev): print(json.dumps(ev), flush=True)
+def say(t): emit({"type": "assistant", "message": {"content": [{"type": "text", "text": t}]}}); time.sleep(DELAY)
+def tool(name, **inp): emit({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": inp}]}}); time.sleep(DELAY)
+def w(rel, text):
+    p = cwd / rel; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(text); tool("Write", file_path=rel)
+
+
+if "BONRS_IDEA_ASSIST" in prompt:  # idea assistant: one JSON answer, like `claude -p --output-format json`
+    inp = json.loads(prompt.split("Input (JSON):", 1)[1].split("\n- idea:", 1)[0])
+    rnd = 2 if inp.get("previous") else 1; time.sleep(DELAY * 2)
+    out = {"title": "Ước lượng SOH pin lithium-ion ít nhãn bằng PINN", "domain": "ml",
+           "debate": [{"role": "Người đề xuất", "say": "Ràng buộc vật lý giúp mô hình học được với ít chu kỳ có nhãn, đúng điểm yếu của các bài nền."},
+                      {"role": "Phản biện", "say": "PINN cho SOH đã có nhiều bài; nếu chỉ một hoá học pin thì tính mới yếu. Cần baseline bán giám sát."},
+                      {"role": "Biên tập tạp chí", "say": f"Hợp phạm vi {inp.get('journal') or 'tạp chí lưu trữ năng lượng'} nếu chứng minh được trên ít nhất hai hoá học pin."},
+                      {"role": "Người thực hiện", "say": "Dữ liệu XJTU và MIT công khai; 1 GPU đủ; khoảng 6 tuần."}],
+           "final": f"Vấn đề: {inp.get('idea','')[:200]}\nCâu hỏi / giả thuyết: Với 10% nhãn, PINN giảm RMSE ít nhất 30% so với baseline tốt nhất trên NMC và LFP.\n"
+                    "Dữ liệu: XJTU, MIT (công khai).\nPhương pháp & so sánh: PINN có ràng buộc suy giảm; so với LSTM, GPR, bán giám sát.\n"
+                    "Đóng góp dự kiến: bằng chứng hiệu quả nhãn trên nhiều hoá học pin.\nPhạm vi & giới hạn: không có dữ liệu thực địa (giả định, cần xác nhận)." + (f"\nGhi chú vòng {rnd}: {inp.get('feedback','')[:200]}" if rnd > 1 else ""),
+           "changes": ["Thu hẹp sang hiệu quả nhãn trên hai hoá học pin", "Thêm baseline bán giám sát"],
+           "questions": ["Bạn có dữ liệu riêng của phòng thí nghiệm không?", "Có giới hạn GPU hay thời gian không?"], "journal_fit": "Phù hợp nếu có hai hoá học pin."}
+    print(json.dumps({"type": "result", "is_error": False, "total_cost_usd": 0.12, "result": "Here it is:\n" + json.dumps(out, ensure_ascii=False)})); sys.exit(0)
+
+emit({"type": "system", "subtype": "init", "model": cfg.get("model", "claude-opus-5-5"), "apiKeySource": "mock"})
+
+if st == "00":
+    base = sorted(x.name for x in (cwd / "lit/base").glob("*") if x.suffix != ".txt") if (cwd / "lit/base").exists() else []
+    refs = cfg.get("base_papers") or []
+    say(f"Reading {len(base)} uploaded base paper(s) and {len(refs)} reference(s). Target journal: {J}.")
+    for b in base: tool("Read", file_path=f"lit/base/{b}")
+    papers = [{"id": f"B{i+1}", "title": t, "source": src} for i, (t, src) in enumerate(
+        [(b.rsplit(".", 1)[0].replace("_", " "), f"lit/base/{b}") for b in base] + [(r, r) for r in refs]
+        or [("Physics-informed battery SOH (2023)", "10.1016/j.est.2023.0001"), ("Few-shot SOH transfer learning (2024)", "10.1109/TII.2024.0002")])]
+    w("lit/base_notes.md", "# Base papers\n\n" + "\n".join(f"## {p['id']}. {p['title']}\n- Limitation: few labelled cycles; single chemistry.\n- Future work: physics priors, cross-chemistry transfer.\n" for p in papers))
+    for seat in ("Builder", "Skeptical reviewer", "Pragmatist", "Editor"): tool("Agent", description=f"{seat} seat", prompt="discuss improvements over base papers")
+    say("Skeptic: a plain PINN on one chemistry is already published (B1). The margin left is label efficiency across chemistries.")
+    ids = [p["id"] for p in papers]
+    hyp = {"recommended": "H2", "verdict": "go", "reason": "H2 has the best expected value: a clear gap left by the base papers, public data, and a cheap first experiment.",
+           "base_papers": papers, "hypotheses": [
+        {"id": "H1", "title": "Plain PINN for SOH", "statement": "A PINN beats data-driven baselines at full labels.", "improvement": "Adds a physics loss to the model of " + ids[0],
+         "grounded_in": ids[:1], "novelty": "Largely done by " + ids[0] + "; margin is small.", "feasibility": "Public data, 1 GPU, 3 weeks.", "p_success": 0.7,
+         "p_accept_if_success": 0.12, "effort_weeks": 3, "risks": ["Incremental: likely desk rejection"], "minimal_experiment": "One chemistry, 3 seeds.", "falsified_if": "No gain over the best baseline."},
+        {"id": "H2", "title": "Label-efficient PINN across chemistries", "statement": "At 10% labels the PINN cuts RMSE by at least 30% versus the best baseline on NMC and LFP.",
+         "improvement": "Combines the physics prior of " + ids[0] + " with the few-shot setting of " + ids[-1], "grounded_in": ids[:2], "novelty": "No paper tests label efficiency across chemistries.",
+         "feasibility": "XJTU and MIT data are public; 1 GPU; 6 weeks.", "p_success": 0.55, "p_accept_if_success": 0.35, "effort_weeks": 6,
+         "risks": ["Gain may vanish at full labels", "Semi-supervised baseline could close the gap"], "minimal_experiment": "NMC only, 10% labels, 3 seeds, compare with the best baseline.",
+         "falsified_if": "RMSE gain below 10% at 10% labels."},
+        {"id": "H3", "title": "Field data validation", "statement": "The model transfers to fleet data without retraining.", "improvement": "Extends " + ids[-1] + " to field data",
+         "grounded_in": ids[-1:], "novelty": "High, but no public field data.", "feasibility": "Needs an industry partner.", "p_success": 0.2, "p_accept_if_success": 0.5, "effort_weeks": 16,
+         "risks": ["Data access"], "minimal_experiment": "Request a sample from a partner.", "falsified_if": "No data within 4 weeks."}]}
+    w("hypotheses.json", json.dumps(hyp, indent=1))
+    say("Scored 3 hypotheses: H2 has the best expected value (0.55 × 0.35 ≈ 0.19). Recommending H2; waiting for the author's go/no-go.")
+    w("scope.md", f"""# Scope
+
+**Idea.** {IDEA}
+
+## Main claim
+A physics-informed loss built on a single-particle degradation model lets a small network estimate state of health (SOH) with under 2% RMSE using only 10% of labelled cycles, where purely data-driven baselines need 40% or more.
+
+## Research questions
+1. **RQ1.** How much labelled data does the physics prior save at equal error?
+2. **RQ2.** Does the advantage hold across chemistries (NMC, LFP) and temperatures?
+3. **RQ3.** Which physics term carries the gain (ablation)?
+
+## Hypotheses
+- **H1.** At 10% labels, PINN RMSE is at least 30% lower than the best data-driven baseline.
+- **H2.** The gap closes as labels approach 100%.
+
+## Pre-committed pivots
+| Outcome | Pivot |
+|---|---|
+| H1 holds | Full paper, {J} |
+| H1 holds only for NMC | Narrow the claim to NMC; keep target |
+| H1 fails | Negative result + analysis; backup journal |
+
+## Search queries
+- physics-informed neural network battery state of health
+- label-efficient SOH estimation lithium-ion
+- degradation model regularisation deep learning battery
+""")
+    w("decisions.md", "# Decisions log\n\n- Narrowed scope to label efficiency (skeptic seat).\n")
+    say("Scope fixed: one main claim, three RQs, pivots written down before any experiment.")
+
+elif st == "01":
+    say("Searching arXiv, OpenAlex, Crossref and Europe PMC with the three scope queries.")
+    tool("Bash", command="python3 bonrs.py lit 'physics-informed neural network battery state of health' -n 40")
+    tool("Bash", command="python3 bonrs.py lit 'label-efficient SOH estimation' -n 40")
+    tool("WebFetch", url="https://api.openalex.org/works?filter=title.search:battery%20state%20of%20health%20physics")
+    say("71 unique records after DOI dedupe; 38 have open full text. 2 key papers are paywalled, requesting uploads.")
+    tool("Read", file_path="lit/corpus.jsonl")
+    w("lit/review.md", """# Literature review
+
+## 1. Data-driven SOH estimation
+Recurrent and attention models reach 1–2% RMSE on NASA and CALCE data when most cycles are labelled [@severson2019; @zhang2022]. Accuracy falls sharply below 20% labels [@roman2021].
+
+## 2. Physics-based and hybrid models
+Single-particle and equivalent-circuit models capture capacity fade mechanisms but need cell-specific parameters [@plett2015]. Hybrid models use physics to generate features [@aykol2021].
+
+## 3. Physics-informed neural networks for batteries
+PINNs embed degradation ODEs in the loss [@wang2024pinn]. Existing work reports accuracy at full labels only; label efficiency is untested.
+""")
+    w("lit/gaps.md", "# Gaps\n\n- **Known:** PINNs match data-driven accuracy with full labels.\n- **Unknown:** whether the physics prior reduces label needs.\n- **Needed:** controlled label-fraction sweep across chemistries.\n")
+    w("lit/key_papers.md", "# Key papers\n\n| Paper | Data | Best RMSE | Labels |\n|---|---|---|---|\n| Severson 2019 | 124 LFP cells | 9.1% (cycle life) | 100% |\n| Wang 2024 | XJTU NMC | 1.4% | 100% |\n| Roman 2021 | Oxford | 2.8% | 100% |\n")
+    w("lit/novelty.md", "# Novelty check\n\nClosest prior: Wang 2024 (PINN, full labels). No paper reports a label-fraction sweep for PINN SOH. **Verdict: novel (medium confidence).**\n")
+    w("lit/refs.bib", "@article{severson2019,\n  title={Data-driven prediction of battery cycle life before capacity degradation},\n  author={Severson, Kristen A. and others},\n  journal={Nature Energy}, year={2019}, doi={10.1038/s41560-019-0356-8}\n}\n@article{wang2024pinn,\n  title={Physics-informed neural network for lithium-ion battery degradation stable modeling and prognosis},\n  author={Wang, Fujin and others},\n  journal={Nature Communications}, year={2024}, doi={10.1038/s41467-024-48779-z}\n}\n")
+    w("lit/REQUEST_FULLTEXT.md", "# Please upload\n\n- Plett 2015, *Battery Management Systems Vol. 1* (Artech House): chapter 3, needed for the degradation equations.\n- Roman et al. 2021, *Nature Machine Intelligence* 3:447: Table 2 baseline numbers.\n")
+    say("Review written around three themes; gap and novelty files ready.")
+
+elif st == "02":
+    say(f"Profiling {J}: OpenAlex source, DOAJ, guide for authors, and 12 recent open-access papers.")
+    tool("Bash", command=f"python3 bonrs.py journal '{J}' --topic 'battery state of health'")
+    tool("WebFetch", url="https://www.sciencedirect.com/journal/journal-of-energy-storage/publish/guide-for-authors")
+    w("journal/profile.json", json.dumps({"name": J, "publisher": "Elsevier", "issn": "2352-152X", "quartile": "Q1", "oa_samples": 12,
+        "typical": {"words": 7400, "figures": 9, "tables": 3, "refs": 52}, "format": "latex", "template": "elsarticle"}, indent=1))
+    w("journal/author_guidelines.md", f"# {J}: guide for authors (summary)\n\n- Highlights: 3–5 bullets, max 85 characters each.\n- Abstract: max 250 words, no citations.\n- Graphical abstract encouraged.\n- Data availability statement required.\n- Declaration of generative AI use required before references.\n")
+    w("journal/style_guide.md", "# Style guide (from 12 accepted papers)\n\n- Median length 7,400 words; 9 figures; 3 tables; 52 references.\n- Introduction ends with a numbered contribution list.\n- Results and Discussion are usually merged.\n- Active voice in Methods is common (\"we train\").\n- Units in SI, capacity in Ah, SOH in %.\n")
+    w("journal/compliance_checklist.md", "# Compliance checklist\n\n- [ ] Highlights (3–5, ≤85 chars)\n- [ ] Abstract ≤250 words\n- [ ] Data availability statement\n- [ ] Generative AI declaration\n- [ ] CRediT author statement\n")
+    say("Format decided by the journal: LaTeX, elsarticle template.")
+
+elif st == "03":
+    say("Designing experiments to answer RQ1–RQ3. Sealing the success criteria before any run.")
+    w("plan.md", "# Plan\n\n| Exp | Question | Data | Metric |\n|---|---|---|---|\n| E1 | Label sweep 5–100% | XJTU NMC, 55 cells | RMSE, MAE |\n| E2 | Cross-chemistry | MIT LFP, 124 cells | RMSE |\n| E3 | Ablation of physics terms | XJTU | ΔRMSE |\n\nCompute: 1 GPU, about 6 h total.\n")
+    w("plan/evaluator.md", "# Sealed evaluator (do not edit after experiments start)\n\nQualified if PINN RMSE at 10% labels ≤ 0.7 × best baseline RMSE on XJTU, with 5 seeds and non-overlapping 95% CI.\n")
+    w("paper/outline.md", "# Outline\n\n1. Introduction (900 words): gap, 3 contributions\n2. Related work (800)\n3. Method (1,400): model, physics loss, training\n4. Experimental setup (900)\n5. Results and discussion (2,600): Fig. 2 sweep, Fig. 3 cross-chemistry, Table 2 ablation\n6. Conclusion (400)\n")
+    w("exp/README.md", "# Experiments\n\n`python run.py --labels 0.1 --seed 0` trains one model and writes `results/<run>.json`.\n")
+    say("Plan, sealed evaluator, outline and figure list are ready.")
+
+elif st == "04":
+    say("Pilot first: one seed at 10% labels to check the loop and timing.")
+    tool("Bash", command="python3 bonrs.py remote run local 'python run.py --labels 0.1 --seed 0 --pilot'")
+    tool("Bash", command="python3 bonrs.py remote tail local")
+    say("Pilot RMSE 1.9%, 41 s per run. Launching the full sweep: 7 label fractions × 3 models × 5 seeds.")
+    tool("Bash", command="python3 bonrs.py remote run local 'bash sweep.sh'")
+    tool("Bash", command="python3 bonrs.py remote status local")
+    tool("Bash", command="python3 bonrs.py remote pull local")
+    fr = [5, 10, 20, 40, 60, 80, 100]
+    res = {"labels": fr, "pinn_rmse": [2.41, 1.62, 1.38, 1.24, 1.19, 1.15, 1.12], "lstm_rmse": [5.88, 3.94, 2.71, 1.82, 1.41, 1.25, 1.18],
+           "transformer_rmse": [6.12, 3.71, 2.48, 1.69, 1.35, 1.21, 1.14]}
+    w("exp/results/sweep.json", json.dumps(res, indent=1))
+    w("exp/results/main.json", json.dumps({"pinn_rmse_10": 1.62, "best_baseline_rmse_10": 3.71, "reduction_10": 0.563, "ci95_pinn_10": [1.48, 1.77], "ci95_base_10": [3.42, 4.02]}, indent=1))
+    tool("Bash", command="python3 bonrs.py registry")
+    w("exp/results/registry.json", json.dumps({"exp/results/main.json:pinn_rmse_10": 1.62, "exp/results/main.json:best_baseline_rmse_10": 3.71,
+        "exp/results/main.json:reduction_10": 0.563}, indent=1))
+    W, H, P = 560, 320, 48  # simple SVG figure from the sweep
+    def xy(i, v): return P + i * (W - 2 * P) / 6, H - P - (v - 1) * (H - 2 * P) / 5.2
+    lines = ""
+    for key, col in (("pinn_rmse", "#0d9488"), ("lstm_rmse", "#ea580c"), ("transformer_rmse", "#6366f1")):
+        lines += f'<polyline fill="none" stroke="{col}" stroke-width="2.5" points="{" ".join(f"{x:.0f},{y:.0f}" for x, y in (xy(i, v) for i, v in enumerate(res[key])))}"/>'
+    w("exp/results/fig_sweep.svg", f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" font-family="sans-serif" font-size="12"><rect width="100%" height="100%" fill="#fff"/>'
+      f'<line x1="{P}" y1="{H-P}" x2="{W-P}" y2="{H-P}" stroke="#333"/><line x1="{P}" y1="{P}" x2="{P}" y2="{H-P}" stroke="#333"/>{lines}'
+      + "".join(f'<text x="{xy(i,1)[0]:.0f}" y="{H-P+18}" text-anchor="middle">{f}%</text>' for i, f in enumerate(fr))
+      + f'<text x="{W/2}" y="{H-8}" text-anchor="middle">Labelled cycles</text><text x="14" y="{H/2}" transform="rotate(-90 14 {H/2})" text-anchor="middle">SOH RMSE (%)</text>'
+      f'<text x="{W-P-140}" y="{P}" fill="#0d9488">PINN (ours)</text><text x="{W-P-140}" y="{P+16}" fill="#ea580c">LSTM</text><text x="{W-P-140}" y="{P+32}" fill="#6366f1">Transformer</text></svg>')
+    w("exp/results/summary.md", "# Results summary\n\nqualified: true\n\nAt 10% labels the PINN reaches 1.62% RMSE (95% CI 1.48–1.77) against 3.71% for the best baseline: a 56% reduction. The gap closes above 60% labels (H2 holds). Sealed criterion (≤0.7×) met.\n")
+    w("exp/analysis_contract.md", "# Analysis contract\n\n- Primary metric: RMSE on held-out cells, 5 seeds, bootstrap 95% CI.\n- Blocker check passed: no test cell appears in training.\n")
+    w("exp/notebook.md", "# Notebook\n\n- Pilot: 41 s/run.\n- Sweep: 105 runs, 72 min.\n- Discarded: cosine schedule (no gain).\n")
+    say("Sealed evaluator: qualified = true. All metrics registered.")
+
+elif st == "05":
+    say("Writing from artifacts only, in the order Methods → Results → Discussion → Introduction → Abstract.")
+    tool("Read", file_path="exp/results/registry.json")
+    tool("Read", file_path="journal/style_guide.md")
+    w("paper/main.tex", r"""\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\title{Physics-informed neural networks cut labelling needs for lithium-ion battery state-of-health estimation}
+\author{Draft prepared with bonrs}
+\begin{document}\maketitle
+\begin{abstract}
+Estimating state of health (SOH) usually needs many labelled cycles. We add a single-particle degradation model to the loss of a small network and train it with 5--100\% of labels on 55 NMC cells. With 10\% of labels the model reaches 1.62\% RMSE, against 3.71\% for the best data-driven baseline, a 56\% reduction. The gap closes above 60\% labels and holds on 124 LFP cells.
+\end{abstract}
+\section{Introduction}
+Labelled capacity measurements are slow to collect. Physics-informed neural networks (PINNs) match data-driven accuracy with full labels, but whether the physics prior reduces label needs has not been tested.
+\section{Method}
+The network maps voltage, current and temperature features to SOH. The loss adds the residual of a single-particle degradation equation.
+\section{Results and discussion}
+Figure 1 shows RMSE against label fraction. At 10\% labels the PINN reaches 1.62\%, the transformer 3.71\% and the LSTM 3.94\%.
+\section{Conclusion}
+A physics prior lowers the labelled data needed for accurate SOH estimation.
+\end{document}
+""")
+    w("paper/claims.yaml", "- id: C1\n  text: PINN RMSE at 10% labels is 56% lower than best baseline\n  evidence: exp/results/main.json:reduction_10\n  strength: strong\n- id: C2\n  text: gap closes above 60% labels\n  evidence: exp/results/sweep.json\n  strength: moderate\n")
+    w("paper/wordcount.md", "| Section | Words | Budget |\n|---|---|---|\n| Abstract | 92 | 250 |\n| Introduction | 870 | 900 |\n| Results | 2,540 | 2,600 |\n")
+    tool("Bash", command="cd paper && pdflatex -interaction=nonstopmode main.tex")
+    try: subprocess.run(["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "main.tex"], cwd=cwd / "paper", capture_output=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired): pass
+    say("Draft compiles. Every number in Abstract and Results is in the registry.")
+
+elif st == "06":
+    seats = ["Editor (desk)", "Methodologist", "Domain expert", "Writing & clarity", "Devil's advocate", "Killer reviewer"]
+    base = {1: 6.4, 2: 7.6, 3: 8.1}.get(K, 8.1)
+    say(f"Review round {K}: running audit, then six blind seats and the Area Chair.")
+    tool("Bash", command="python3 bonrs.py audit --final")
+    for s in seats: tool("Agent", description=f"review seat: {s}", prompt="blind review")
+    scores = {s: round(min(10, max(3, base + random.uniform(-0.9, 0.7))), 1) for s in seats}
+    major = {1: 2}.get(K, 0)
+    decision = {1: "major", 2: "minor"}.get(K, "accept")
+    items = {1: ["**MAJOR** (Methodologist): confidence intervals for the 5% label point overlap; report a paired test.",
+                 "**MAJOR** (Killer): no comparison with a semi-supervised baseline (e.g. mean teacher).",
+                 "**MINOR** (Writing): Introduction contribution list is not numbered as in the journal's papers."],
+             2: ["**MINOR** (Domain): discuss temperature range limits of the single-particle model.",
+                 "**MINOR** (Editor): highlights exceed 85 characters in two bullets."]}.get(K, ["**MINOR** (Writing): two sentences in Discussion repeat the Abstract."])
+    w(f"reviews/round_{K}.md", f"# Review round {K}\n\n**Area Chair decision: {decision}** · mean score {base}\n\n## Seat scores\n"
+      + "".join(f"- {s}: {v}\n" for s, v in scores.items()) + "\n## Items upheld by the Area Chair\n" + "".join(f"{i+1}. {t}\n" for i, t in enumerate(items))
+      + "\n## Pairwise comparison with accepted papers\nCompared with 3 recent papers in the journal on SOH estimation, this draft is "
+      + {1: "weaker on baselines and statistics.", 2: "comparable in rigour, clearer in framing."}.get(K, "comparable or stronger on all axes.") + "\n")
+    w(f"reviews/round_{K}.json", json.dumps({"score": base, "decision": decision, "open_major": major, "seats": scores, "items": len(items)}))
+    say(f"Round {K}: score {base}, decision {decision}, open MAJOR {major}.")
+
+elif st == "07":
+    say("Addressing only the items the Area Chair upheld, plus open user comments.")
+    tool("Read", file_path="comments/open.md")
+    if not (cwd / "exp/results/semi.json").exists():
+        tool("Bash", command="python3 bonrs.py remote run local 'python run.py --model mean_teacher --labels 0.1 --seeds 5'")
+        w("exp/results/semi.json", json.dumps({"mean_teacher_rmse_10": 2.87, "wilcoxon_p": 0.004}, indent=1))
+    tool("Edit", file_path="paper/main.tex", old_string="...", new_string="...")
+    w("paper/response_letter.md", "# Response to reviewers\n\n| Item | Response | Where |\n|---|---|---|\n| Paired test | Added Wilcoxon signed-rank test, p = 0.004. | §5.1 |\n| Semi-supervised baseline | Added mean teacher: 2.87% RMSE at 10% labels, still 44% above ours. | Table 2 |\n| Contribution list | Numbered (3 items). | §1 |\n")
+    say("Revision done; response letter updated.")
+
+elif st == "08":
+    say("Building the submission package and the one-page editor letter.")
+    tool("Read", file_path="journal/compliance_checklist.md")
+    w("submission/cover_letter.md", f"Dear Editor,\n\nWe submit \"Physics-informed neural networks cut labelling needs for lithium-ion battery state-of-health estimation\" for consideration in {J}.\n\nThe paper shows that a physics prior reduces the labelled cycles needed for accurate SOH estimation by a factor of four.\n")
+    w("submission/checklist.md", "# Submission checklist\n\n| Item | Status | Evidence |\n|---|---|---|\n| Highlights 3–5, ≤85 chars | PASS | highlights.md |\n| Abstract ≤250 words | PASS | 92 words |\n| Data availability | PASS | §7 |\n| Generative AI declaration | PASS | ai_disclosure.md |\n| CRediT statement | TODO | authors must fill |\n")
+    w("submission/ai_disclosure.md", "# Declaration of generative AI use\n\nDuring the preparation of this work the authors used Claude (Anthropic) via bonrs to search literature, run analysis code and draft text. The authors reviewed and edited the content and take full responsibility for it.\n")
+    w("submission/highlights.md", "- A physics prior cuts labelled cycles needed for SOH estimation fourfold\n- 1.62% RMSE with 10% labels on 55 NMC cells\n- Gain holds on 124 LFP cells\n")
+    w("submission/editor_letter.md", f"""# Editor letter: read this first
+
+**Target:** {J} (Elsevier, Q1). **Backup:** Applied Energy, eTransportation.
+
+## Verdict
+Ready for author review. Internal panel: 3 rounds, final score 8.1, decision *accept*, no open MAJOR items.
+
+## What you must do
+1. Fill the CRediT author statement and affiliations.
+2. Check Plett 2015 equations (uploaded chapter) against Eq. 3.
+3. Read the Discussion: it is the part least constrained by data.
+
+## Main claim and evidence
+- PINN RMSE 1.62% vs 3.71% at 10% labels (`exp/results/main.json`), Wilcoxon p = 0.004.
+
+## Risks a real reviewer may raise
+- Only two chemistries; no field data.
+- Semi-supervised baseline added late; tuning budget smaller than ours.
+""")
+    say("Package ready. Editor letter is the hand-off page.")
+
+elif st == "09":
+    say("Retrospective: extracting lessons for the knowledge base.")
+    tool("Read", file_path="reviews/round_1.md")
+    w("retro.md", "# Retrospective\n\n| Lesson | Category | Severity |\n|---|---|---|\n| Add a semi-supervised baseline whenever the claim is label efficiency | experiment | high |\n| Report paired tests, not only CIs, for low-label points | statistics | medium |\n| Journal wants numbered contribution lists | journal | low |\n")
+    say("3 lessons proposed for 40-experience; 1 journal rule for 30-journal.")
+
+else:  # knowledge ingest
+    drafts = re.search(r"one file `([^`]*)/<short", prompt)
+    d = Path(drafts.group(1)) if drafts else cwd / "inbox/drafts"
+    d.mkdir(parents=True, exist_ok=True)
+    say("Reading the uploaded document and comparing with INDEX.json.")
+    (d / "limitations-tied-to-inference.md").write_text("---\nname: limitations-tied-to-inference\nlevel: general\ntags: [discussion]\nsource: mock\nconfidence: 0.85\nstatus: draft\n---\n# Limitations\n- Tie each limitation to the inference it weakens.\n")
+
+cost = {"00": 1.3, "01": 4.7, "02": 5.2, "03": 3.3, "04": 6.8, "05": 7.9, "06": 3.6, "07": 4.1, "08": 2.2, "09": 0.9}.get(st, 0.4)
+emit({"type": "result", "is_error": False, "total_cost_usd": round(cost * random.uniform(0.85, 1.15), 2), "result": f"[mock] stage {st} done"})

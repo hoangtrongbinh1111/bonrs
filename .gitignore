@@ -1,0 +1,23 @@
+# local data (in Docker it lives in ./data)
+data/
+runs/
+tenants/
+exports/
+ssh/
+bonrs.db*
+*.sqlite
+knowledge/inbox/
+.sandbox/
+.env
+
+# optional third-party tools installed by vendor.sh (their own licenses)
+/.claude/
+/vendor/
+
+# dev junk
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.playwright-mcp/
+*.bak

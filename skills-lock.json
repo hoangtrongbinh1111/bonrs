@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "bib-search-citation": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/bib-search-citation/SKILL.md",
+      "computedHash": "18bc7d5e3ff133b2f9e6f5d63833054e6b18dbe87a137e75bc1eaa1b899ab2bd"
+    },
+    "cover-letter": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/cover-letter/SKILL.md",
+      "computedHash": "753a6d29c11be84188d5ba05366c93af380824754d997885e2de75d4b5fe94cb"
+    },
+    "latex-defense-zh": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/latex-defense-zh/SKILL.md",
+      "computedHash": "b94960cb246177c925b02610304e7984fa47c735c3740ca27cd740d24cc88e8c"
+    },
+    "latex-paper-en": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/latex-paper-en/SKILL.md",
+      "computedHash": "c1ca54bd7c9896b273cdf44b2b6fb30b242369c12d63d9d678b420512348e2c9"
+    },
+    "latex-thesis-zh": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/latex-thesis-zh/SKILL.md",
+      "computedHash": "e5faf0b2532ff3d4f4bef2523c4a42497d547fa31600455f7cdbc614bb2b2116"
+    },
+    "paper-audit": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/paper-audit/SKILL.md",
+      "computedHash": "2ad8fc34a1ee0495f457169c8ce08bd7704af15a5806eb3ebb42b67427bc9a97"
+    },
+    "paper-writing-studio": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/paper-writing-studio/SKILL.md",
+      "computedHash": "da71dda30aea7d4c3815e78a8f77c57717977c4a666d1d1081d16e22e2eb189d"
+    },
+    "typst-paper": {
+      "source": "bahayonghang/academic-writing-skills",
+      "sourceType": "github",
+      "skillPath": "academic-writing-skills/typst-paper/SKILL.md",
+      "computedHash": "1d9dc59f38533586b279bff47b5ba290ce8c7686d26a7a0dd274ef44d86c52ca"
+    }
+  }
+}

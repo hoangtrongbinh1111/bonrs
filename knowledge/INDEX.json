@@ -1,0 +1,258 @@
+[
+ {
+  "name": "abstract_and_title",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/abstract_and_title.md",
+  "tier": "00-general",
+  "chars": 778
+ },
+ {
+  "name": "ai_policy",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/ai_policy.md",
+  "tier": "00-general",
+  "chars": 2410
+ },
+ {
+  "name": "bibliometrics",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/bibliometrics.md",
+  "tier": "00-general",
+  "chars": 586
+ },
+ {
+  "name": "desk_reject_avoidance",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/desk_reject_avoidance.md",
+  "tier": "00-general",
+  "chars": 1193
+ },
+ {
+  "name": "experiment_loop",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/experiment_loop.md",
+  "tier": "00-general",
+  "chars": 1853
+ },
+ {
+  "name": "introduction_cars",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/introduction_cars.md",
+  "tier": "00-general",
+  "chars": 1309
+ },
+ {
+  "name": "paper_integrity",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/paper_integrity.md",
+  "tier": "00-general",
+  "chars": 2112
+ },
+ {
+  "name": "review_panel",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/review_panel.md",
+  "tier": "00-general",
+  "chars": 532
+ },
+ {
+  "name": "rules",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/rules.md",
+  "tier": "00-general",
+  "chars": 1461
+ },
+ {
+  "name": "writing_order_and_sections",
+  "level": "general",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 3,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "00-general/writing_order_and_sections.md",
+  "tier": "00-general",
+  "chars": 2413
+ },
+ {
+  "name": "biomed-readme",
+  "level": "domain",
+  "domain": "biomed",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 2,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "10-domain/biomed/README.md",
+  "tier": "10-domain",
+  "chars": 658
+ },
+ {
+  "name": "ml-readme",
+  "level": "domain",
+  "domain": "ml",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 2,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "10-domain/ml/README.md",
+  "tier": "10-domain",
+  "chars": 421
+ },
+ {
+  "name": "socsci-readme",
+  "level": "domain",
+  "domain": "socsci",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 2,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "10-domain/socsci/README.md",
+  "tier": "10-domain",
+  "chars": 606
+ },
+ {
+  "name": "20-article-type-readme",
+  "level": "article_type",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 2,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "20-article-type/README.md",
+  "tier": "20-article-type",
+  "chars": 362
+ },
+ {
+  "name": "30-journal-readme",
+  "level": "journal",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 2,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "30-journal/README.md",
+  "tier": "30-journal",
+  "chars": 233
+ },
+ {
+  "name": "journal-of-energy-storage-elsevier-research-arti",
+  "level": "journal",
+  "category": "WRITING",
+  "severity": 2,
+  "confidence": 0.7,
+  "added": "2026-10-26",
+  "status": "active",
+  "journal": "Journal of Energy Storage",
+  "path": "30-journal/journal-of-energy-storage/2026-10-26-journal-of-energy-storage-elsevier-research-arti.md",
+  "tier": "30-journal",
+  "chars": 2291
+ },
+ {
+  "name": "40-experience-readme",
+  "level": "experience",
+  "tags": [
+   "writing"
+  ],
+  "source": "user-provided notes and surveyed tools",
+  "added": "2026-10-26",
+  "severity": 2,
+  "confidence": 0.9,
+  "status": "active",
+  "path": "40-experience/README.md",
+  "tier": "40-experience",
+  "chars": 210
+ }
+]

@@ -1,0 +1,9 @@
+# Sources crawled by `bonrs kb crawl` (admin-editable in the web UI). New pages are distilled into draft skills for admin review.
+sources:
+  - {name: T&F Author Services, url: "https://authorservices.taylorandfrancis.com/publishing-your-research/writing-your-paper/", level: general}
+  - {name: Elsevier Researcher Academy, url: "https://researcheracademy.elsevier.com/", level: general}
+  - {name: Springer Nature manuscript guide, url: "https://www.springernature.com/gp/authors/campaigns/writing-a-journal-manuscript", level: general}
+  - {name: Wiley writing for publication, url: "https://authorservices.wiley.com/author-resources/Journal-Authors/Prepare/writing-for-publication.html", level: general}
+  - {name: PLOS methods guide, url: "https://plos.org/resource/how-to-write-your-methods/", level: general}
+  - {name: IEEE Author Center, url: "https://journals.ieeeauthorcenter.ieee.org/create-your-ieee-journal-article/", level: general}
+  - {name: EQUATOR reporting guidelines, url: "https://www.equator-network.org/reporting-guidelines/", level: domain, domain: biomed}

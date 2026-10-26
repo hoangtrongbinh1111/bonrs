@@ -1,0 +1,13 @@
+services:
+  bonrs:
+    build: .
+    image: bonrs:latest
+    restart: unless-stopped
+    ports: ["${BONRS_PORT:-8765}:8765"]
+    env_file: .env          # BONRS_ADMIN_* are read once at start and never passed to jobs
+    pids_limit: 4096
+    # mem_limit: 16g        # recommended: caps what all jobs together can use
+    volumes:
+      - ./data:/data          # runs, knowledge base, database, per-user folders (ssh keys, caches)
+    # GPU on this server for local experiments (needs nvidia-container-toolkit):
+    # deploy: {resources: {reservations: {devices: [{driver: nvidia, count: all, capabilities: [gpu]}]}}}
